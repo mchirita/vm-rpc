@@ -1,0 +1,25 @@
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>gRPC client generator</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body>
+    <br></br>
+    <div>Please provide .proto file content</div>
+    <br></br>
+    <form action="#" th:action="@{/protoUpload}" th:object="${protoContent}"
+        method="post">
+        <table>
+            <tr>
+                <td><textarea name="proto_content" rows="20" cols="120" th:field="*{content}" />
+                </td>
+            </tr>
+            
+            <tr>
+                <td align="center"><input type="submit" value="Load" /></td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>

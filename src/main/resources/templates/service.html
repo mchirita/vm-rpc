@@ -1,0 +1,26 @@
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>gRPC client generator</title>
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+	integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+	crossorigin="anonymous">
+</head>
+<body>
+	<br></br>
+	<div>Please select a method to run for service</div>
+	<br></br>
+	<form action="#" th:action="@{/selectMethod}"
+		th:object="${selectedMethod}" method="post" class="form-horizontal">
+
+		<select th:field="*{serviceMethod}" th:remove="all-but-first" class="form-control">
+			<option th:each="method : ${grpcServiceMethods}" th:value="${method}"
+				th:text="${method}"></option>
+		</select> 
+		<input type="submit" value="Send" />
+	</form>
+
+	
+</body>
+</html>
