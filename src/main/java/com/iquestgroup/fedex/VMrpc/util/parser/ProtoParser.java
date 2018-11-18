@@ -61,6 +61,7 @@ public class ProtoParser {
 
     private String formatProtoString(String string) {
         string = string.replace("\n", " ").trim();
+        string = string.replace("\r", " ").trim();
         string = string.replace("\t", " ").trim();
         string = string.replaceAll(" +", " ");
         string = string.replace("{ }", " ").trim();
@@ -142,9 +143,6 @@ public class ProtoParser {
                     .name(enumTypeName)
                     .fields(extractEnumFieldTypes(enumTypeContent)).build());
 
-        }
-        if (enumTypes.isEmpty()) {
-            throw new IllegalArgumentException("No enum type is defined in the proto file: " + file);
         }
         return enumTypes;
     }
