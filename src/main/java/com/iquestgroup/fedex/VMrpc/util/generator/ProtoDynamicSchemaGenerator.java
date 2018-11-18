@@ -4,9 +4,8 @@ import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.github.os72.protobuf.dynamic.MessageDefinition;
 import com.google.protobuf.DescriptorProtos;
 import com.iquestgroup.fedex.VMrpc.model.ProtoFile;
-import com.iquestgroup.fedex.VMrpc.util.converter.ProtoFileToDescriptorProtoConverter;
-import com.iquestgroup.fedex.VMrpc.util.parser.ProtoParser;
 import com.iquestgroup.fedex.VMrpc.util.FieldMappings;
+import com.iquestgroup.fedex.VMrpc.util.converter.ProtoFileToDescriptorProtoConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,13 +13,10 @@ import org.springframework.stereotype.Component;
 public class ProtoDynamicSchemaGenerator {
 
     @Autowired
-    private ProtoParser protoParser;
-
-    @Autowired
     private ProtoFileToDescriptorProtoConverter descriptorProtoConverter;
 
-    public DynamicSchema generateSchemaFromFile(String filePath) throws Exception {
-        ProtoFile protoFile = protoParser.parseFile(filePath);
+    public DynamicSchema generateSchemaFromFile(ProtoFile protoFile) throws Exception {
+
         DescriptorProtos.FileDescriptorProto proto = descriptorProtoConverter.convertFromProtoFile(protoFile);
 
         return createDynamicSchemaUsingProtoDescriptor(proto);
@@ -39,8 +35,8 @@ public class ProtoDynamicSchemaGenerator {
                 msgDefBuilder.addField(
                         FieldMappings.getKeyFroLabel(field.getLabel()),
                         FieldMappings.getKeyFroType(field.getType()),
-                                field.getName(),
-                                field.getNumber());
+                        field.getName(),
+                        field.getNumber());
             }
             schemaBuilder.addMessageDefinition(msgDefBuilder.build());
         }

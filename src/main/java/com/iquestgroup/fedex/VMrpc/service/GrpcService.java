@@ -1,58 +1,98 @@
 package com.iquestgroup.fedex.VMrpc.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
-import com.iquestgroup.fedex.VMrpc.util.generator.ProtoDynamicSchemaGenerator;
+import com.iquestgroup.fedex.VMrpc.model.ProtoFile;
+import com.iquestgroup.fedex.VMrpc.model.ProtoMethod;
 import com.iquestgroup.fedex.VMrpc.service.grpc.ChannelFactory;
-import com.iquestgroup.fedex.VMrpc.service.grpc.DynamicMessageMarshaller;
 import com.iquestgroup.fedex.VMrpc.service.grpc.GeneralBlockingStub;
+import com.iquestgroup.fedex.VMrpc.util.generator.MethodDescriptorGenerator;
+import com.iquestgroup.fedex.VMrpc.util.generator.ProtoDynamicSchemaGenerator;
+import com.iquestgroup.fedex.VMrpc.util.parser.ProtoParser;
 import io.grpc.Channel;
 import io.grpc.MethodDescriptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import static io.grpc.MethodDescriptor.generateFullMethodName;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class GrpcService {
+
+    private ObjectMapper mapper = new ObjectMapper();
+
+    @Autowired
+    private ProtoParser protoParser;
 
     @Autowired
     private ProtoDynamicSchemaGenerator schemaGenerator;
 
     @Autowired
+    private MethodDescriptorGenerator methodDescriptorGenerator;
+
+    @Autowired
     private ChannelFactory channelFactory;
 
-    public String call() throws Exception {
-        DynamicSchema schema = schemaGenerator.generateSchemaFromFile("helloworld.proto");
-        DynamicMessage msg = createSimpleDynamicMessageForTest(schema);
+    private ConcurrentHashMap<String, Channel> channelMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, MethodDescriptor> descriptorMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<MethodDescriptor, ProtoMethod> methodMap = new ConcurrentHashMap<>();
+    private DynamicSchema schema;
 
-        Channel channel = channelFactory.createChannel(HostAndPort.fromParts("localhost", 50051));
+    public Enumeration<String> generateServiceMethodsForProtoFile(String filePath) throws Exception {
 
-        MethodDescriptor methodDescriptor = createMethodDescriptor();
-        GeneralBlockingStub greeterBlockingStub = new GeneralBlockingStub(channel);
-        return greeterBlockingStub.sendMessage(msg, methodDescriptor).toString();
+        ProtoFile protoFile = protoParser.parseFile(filePath);
+
+        methodMap.putAll(methodDescriptorGenerator.generateMethodDescriptors(protoFile));
+        for (MethodDescriptor methodDescriptor : methodMap.keySet()) {
+            descriptorMap.put(methodDescriptor.getFullMethodName(), methodDescriptor);
+        }
+
+        schema = schemaGenerator.generateSchemaFromFile(protoFile);
+        return descriptorMap.keys();
     }
 
-    private DynamicMessage createSimpleDynamicMessageForTest(DynamicSchema schema) {
-        DynamicMessage.Builder msgBuilder = schema.newMessageBuilder("HelloRequest");
+    public Enumeration<String> generateServiceMethodsForProtoString(String protoFileContent) throws Exception {
+
+        ProtoFile protoFile = protoParser.parseString(protoFileContent);
+
+        methodMap.putAll(methodDescriptorGenerator.generateMethodDescriptors(protoFile));
+        for (MethodDescriptor methodDescriptor : methodMap.keySet()) {
+            descriptorMap.put(methodDescriptor.getFullMethodName(), methodDescriptor);
+        }
+
+        schema = schemaGenerator.generateSchemaFromFile(protoFile);
+        return descriptorMap.keys();
+    }
+
+
+    public String call(String hostname, int port, String serviceMethod, String jsonPayload) throws Exception {
+        Channel channel = channelMap.computeIfAbsent(hostname + ":" + port, k -> channelFactory.createChannel(HostAndPort.fromParts(hostname, port)));
+        MethodDescriptor methodDescriptor = descriptorMap.get(serviceMethod);
+        DynamicMessage msg = createMessageUsingSchemaAndPayload(schema, jsonPayload, methodMap.get(methodDescriptor));
+
+        GeneralBlockingStub blockingStub = new GeneralBlockingStub(channel);
+        return blockingStub.sendMessage(msg, methodDescriptor).toString();
+    }
+
+    private DynamicMessage createMessageUsingSchemaAndPayload(DynamicSchema schema, String jsonPayload, ProtoMethod serviceMethod) throws IOException {
+        DynamicMessage.Builder msgBuilder = schema.newMessageBuilder(serviceMethod.getInputType());
         Descriptors.Descriptor msgDesc = msgBuilder.getDescriptorForType();
 
-        return msgBuilder
-                .setField(msgDesc.findFieldByName("name"), "Alan Turing")
-                .build();
+        Map<String, Object> jsonMap = mapper.readValue(jsonPayload, new TypeReference<Map<String, Object>>() {
+        });
+        for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
+            Descriptors.FieldDescriptor fieldDescriptor = msgDesc.findFieldByName(entry.getKey());
+            msgBuilder.setField(fieldDescriptor, entry.getValue());
+        }
+
+        return msgBuilder.build();
     }
-
-    private MethodDescriptor createMethodDescriptor() {
-
-        return MethodDescriptor.newBuilder()
-                .setType(MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName(generateFullMethodName(
-                        "helloworld.Greeter", "SayHello"))
-                .setResponseMarshaller(DynamicMessageMarshaller.INSTANCE)
-                .setRequestMarshaller(DynamicMessageMarshaller.INSTANCE)
-                .build();
-    }
-
 }
