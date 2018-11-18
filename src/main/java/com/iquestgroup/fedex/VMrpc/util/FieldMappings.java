@@ -34,7 +34,7 @@ public class FieldMappings {
         LABEL_TYPES.put("required", Label.LABEL_REQUIRED);
     }
 
-    public static String getKeyFroLabel(Label label) {
+    public static String getKeyFromLabel(Label label) {
         for (Map.Entry<String, Label> entry : LABEL_TYPES.entrySet()) {
             if (entry.getValue().equals(label)) {
                 return entry.getKey();
@@ -43,7 +43,7 @@ public class FieldMappings {
         throw new IllegalArgumentException("No key for label: " + label);
     }
 
-    public static String getKeyFroType(Type type) {
+    public static String getKeyFromType(Type type) {
         for (Map.Entry<String, Type> entry : SIGNATURE_TYPES.entrySet()) {
             if (entry.getValue().equals(type)) {
                 return entry.getKey();

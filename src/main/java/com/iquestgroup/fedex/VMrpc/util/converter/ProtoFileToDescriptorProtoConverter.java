@@ -84,6 +84,10 @@ public class ProtoFileToDescriptorProtoConverter {
                     .setName(field.getFieldName())
                     .setType(field.getFieldType())
                     .setNumber(field.getPosition());
+            if (field.getFieldTypeName() != null) {
+                fieldDescriptorBuilder
+                        .setTypeName(field.getFieldTypeName());
+            }
             if (field.getFieldLabel() != null) {
                 fieldDescriptorBuilder
                         .setLabel(field.getFieldLabel());

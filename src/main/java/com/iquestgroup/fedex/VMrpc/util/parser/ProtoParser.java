@@ -34,21 +34,23 @@ public class ProtoParser {
     public ProtoFile parseFile(String filePath) throws IOException {
         String file = loadProtoFileFromPath(filePath);
         file = formatProtoString(file);
+        List<ProtoEnumType> enumTypes = extractEnumTypes(file);
         return ProtoFile.newBuilder()
                 .packageName(extractPackageName(file))
                 .services(extractServiceTypes(file))
-                .enumTypes(extractEnumTypes(file))
-                .messageTypes(extractMessageTypes(file.replaceAll(ENUM_TYPE_REGEX, " ")))
+                .enumTypes(enumTypes)
+                .messageTypes(extractMessageTypes(enumTypes, file.replaceAll(ENUM_TYPE_REGEX, " ")))
                 .build();
     }
 
     public ProtoFile parseString(String string) throws IOException {
         string = formatProtoString(string);
+        List<ProtoEnumType> enumTypes = extractEnumTypes(string);
         return ProtoFile.newBuilder()
                 .packageName(extractPackageName(string))
                 .services(extractServiceTypes(string))
-                .enumTypes(extractEnumTypes(string))
-                .messageTypes(extractMessageTypes(string.replaceAll(ENUM_TYPE_REGEX, " ")))
+                .enumTypes(enumTypes)
+                .messageTypes(extractMessageTypes(enumTypes, string.replaceAll(ENUM_TYPE_REGEX, " ")))
                 .build();
     }
 
@@ -109,7 +111,7 @@ public class ProtoParser {
     }
 
 
-    private List<ProtoMessageType> extractMessageTypes(String file) {
+    private List<ProtoMessageType> extractMessageTypes(List<ProtoEnumType> enumTypes, String file) {
         List<ProtoMessageType> messageTypes = Lists.newArrayList();
         Matcher m = messageType.matcher(file);
         while (m.find()) {
@@ -119,7 +121,7 @@ public class ProtoParser {
 
             messageTypes.add(ProtoMessageType.newBuilder()
                     .name(messageTypeName)
-                    .fields(extractFieldTypes(messageTypeContent)).build());
+                    .fields(extractFieldTypes(enumTypes, messageTypeContent)).build());
 
         }
         if (messageTypes.isEmpty()) {
@@ -159,14 +161,14 @@ public class ProtoParser {
     }
 
 
-    private List<ProtoField> extractFieldTypes(String messageTypeContent) {
+    private List<ProtoField> extractFieldTypes(List<ProtoEnumType> enumTypes, String messageTypeContent) {
         List<ProtoField> fields = Lists.newArrayList();
         String[] fieldsAsString = messageTypeContent.split(";");
         for (String field : fieldsAsString) {
             ProtoField.Builder protoFieldBuilder = ProtoField.newBuilder();
 
             field = updateBuilderWithFieldLabelIfPresent(protoFieldBuilder, field);
-            field = updateBuilderWithFieldType(protoFieldBuilder, field);
+            field = updateBuilderWithFieldType(enumTypes, protoFieldBuilder, field);
             field = updateBuilderWithFieldNameAndPosition(protoFieldBuilder, field);
 
             fields.add(protoFieldBuilder.build());
@@ -193,16 +195,23 @@ public class ProtoParser {
     }
 
     /**
-     * At this point the field contains e.g. "string name = 1"
+     * At this point the field contains e.g. "string name = 1", "TestEnum name = 1"
      *
      * @returns e.g. "name = 1"
      */
-    private String updateBuilderWithFieldType(ProtoField.Builder protoFieldBuilder, String field) {
+    private String updateBuilderWithFieldType(List<ProtoEnumType> enumTypes, ProtoField.Builder protoFieldBuilder, String field) {
         for (Map.Entry<String, Type> entry : com.iquestgroup.fedex.VMrpc.util.FieldMappings.SIGNATURE_TYPES.entrySet()) {
             String type = entry.getKey();
             if (field.contains(type)) {
                 protoFieldBuilder.fieldType(entry.getValue());
                 return field.replaceFirst(type, "").trim();
+            }
+        }
+        for (ProtoEnumType enumType: enumTypes) {
+            if (field.contains(enumType.getName())) {
+                protoFieldBuilder.fieldType(Type.TYPE_ENUM);
+                protoFieldBuilder.fieldTypeName(enumType.getName());
+                return field.replaceFirst(enumType.getName(), "").trim();
             }
         }
         return field;

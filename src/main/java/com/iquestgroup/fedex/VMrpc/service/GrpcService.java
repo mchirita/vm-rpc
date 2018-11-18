@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.net.HostAndPort;
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.iquestgroup.fedex.VMrpc.model.ProtoFile;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -76,7 +76,8 @@ public class GrpcService {
     public String call(String hostname, int port, String serviceMethod, String jsonPayload) throws Exception {
         Channel channel = channelMap.computeIfAbsent(hostname + ":" + port, k -> channelFactory.createChannel(HostAndPort.fromParts(hostname, port)));
         MethodDescriptor methodDescriptor = descriptorMap.get(serviceMethod);
-        DynamicMessage msg = createMessageUsingSchemaAndPayload(schema, jsonPayload, methodMap.get(methodDescriptor));
+        ProtoMethod method = methodMap.get(methodDescriptor);
+        DynamicMessage msg = createMessageUsingSchemaAndPayload(schema, jsonPayload, method);
 
         GeneralBlockingStub blockingStub = new GeneralBlockingStub(channel);
         return blockingStub.sendMessage(msg, methodDescriptor).toString();
@@ -90,7 +91,12 @@ public class GrpcService {
         });
         for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
             Descriptors.FieldDescriptor fieldDescriptor = msgDesc.findFieldByName(entry.getKey());
-            msgBuilder.setField(fieldDescriptor, entry.getValue());
+            if(fieldDescriptor.getType() == Descriptors.FieldDescriptor.Type.ENUM) {
+                Descriptors.EnumValueDescriptor enumValueDescriptorProto = fieldDescriptor.getEnumType().findValueByName(entry.getValue().toString());
+                msgBuilder.setField(fieldDescriptor, enumValueDescriptorProto.getNumber());
+            } else {
+                msgBuilder.setField(fieldDescriptor, entry.getValue());
+            }
         }
 
         return msgBuilder.build();

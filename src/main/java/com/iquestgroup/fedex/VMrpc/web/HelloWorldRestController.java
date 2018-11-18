@@ -28,7 +28,8 @@ public class HelloWorldRestController {
     public String message(@PathVariable String methodName) {
 
         try {
-            return grpcService.call("localhost", 50051, "helloworld.Greeter/SayHello", "{ \"name\" : \"Mr. Alan Turing\"}");
+            return grpcService.call("localhost", 50051, "helloworld.Greeter/SayHello",
+                    "{ \"name\" : \"Mr. Alan Turing\" }");
         } catch (Exception e) {
             logger.error("Error: ", e);
             return ExceptionUtils.getStackTrace(e);

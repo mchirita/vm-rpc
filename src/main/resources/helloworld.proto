@@ -9,23 +9,10 @@ package helloworld;
 
 message HelloRequest {
     string name = 1;
-    enum TestEnum1 {
-        UNIVERSAL = 0;
-        WEB = 1;
-    }
 }
 
 message HelloReply {
-    enum TestEnum2 {
-        UNIVERSAL = 0;
-        WEB = 1;
-    }
     string message = 1;
-}
-
-enum TestEnum3 {
-    UNIVERSAL = 0;
-    WEB = 1;
 }
 
 service Greeter {

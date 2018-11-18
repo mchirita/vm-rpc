@@ -10,6 +10,7 @@ import lombok.Data;
 public class ProtoField {
     private Label fieldLabel;
     private Type fieldType;
+    private String fieldTypeName;
     private String fieldName;
     private int position = 1;
 }
