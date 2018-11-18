@@ -6,6 +6,7 @@ import com.google.protobuf.DescriptorProtos.FieldDescriptorProto.Label;
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto.Type;
 import com.iquestgroup.fedex.VMrpc.model.ProtoField;
 import com.iquestgroup.fedex.VMrpc.model.ProtoFile;
+import com.iquestgroup.fedex.VMrpc.model.ProtoEnumType;
 import com.iquestgroup.fedex.VMrpc.model.ProtoMessageType;
 import com.iquestgroup.fedex.VMrpc.model.ProtoMethod;
 import com.iquestgroup.fedex.VMrpc.model.ProtoService;
@@ -23,10 +24,12 @@ import java.util.regex.Pattern;
 
 @Component
 public class ProtoParser {
+    private static final String ENUM_TYPE_REGEX = "\\senum(.*?)\\s+\\{(.*?)\\}\\s+";
     private Pattern packageName = Pattern.compile("\\spackage(.*?)\\;");
     private Pattern serviceType = Pattern.compile("\\sservice(.*?)(?<=\\{)(.+?)(?=\\})");
     private Pattern methodType = Pattern.compile("(.*?)\\s+\\((.*?)\\)\\s+returns\\s+\\((.*?)\\)");
-    private Pattern messageType = Pattern.compile("\\smessage(.*?)\\s+\\{(.*?)\\}\\s+");
+    private Pattern messageType = Pattern.compile("\\s?message(.*?)\\s+\\{(.*?)\\}\\s?");
+    private Pattern enumType = Pattern.compile(ENUM_TYPE_REGEX);
 
     public ProtoFile parseFile(String filePath) throws IOException {
         String file = loadProtoFileFromPath(filePath);
@@ -34,7 +37,9 @@ public class ProtoParser {
         return ProtoFile.newBuilder()
                 .packageName(extractPackageName(file))
                 .services(extractServiceTypes(file))
-                .messageTypes(extractMessageTypes(file)).build();
+                .enumTypes(extractEnumTypes(file))
+                .messageTypes(extractMessageTypes(file.replaceAll(ENUM_TYPE_REGEX, " ")))
+                .build();
     }
 
     public ProtoFile parseString(String string) throws IOException {
@@ -42,7 +47,9 @@ public class ProtoParser {
         return ProtoFile.newBuilder()
                 .packageName(extractPackageName(string))
                 .services(extractServiceTypes(string))
-                .messageTypes(extractMessageTypes(string)).build();
+                .enumTypes(extractEnumTypes(string))
+                .messageTypes(extractMessageTypes(string.replaceAll(ENUM_TYPE_REGEX, " ")))
+                .build();
     }
 
     private String loadProtoFileFromPath(String path) throws IOException {
@@ -106,20 +113,51 @@ public class ProtoParser {
         List<ProtoMessageType> messageTypes = Lists.newArrayList();
         Matcher m = messageType.matcher(file);
         while (m.find()) {
-            //for (int i = 1; i <= m.groupCount(); i++) {
+
             String messageTypeName = m.group(1).trim();
             String messageTypeContent = m.group(2).trim();
 
             messageTypes.add(ProtoMessageType.newBuilder()
                     .name(messageTypeName)
                     .fields(extractFieldTypes(messageTypeContent)).build());
-            // }
+
         }
         if (messageTypes.isEmpty()) {
-            throw new IllegalArgumentException("No message type define in proto file: " + file);
+            throw new IllegalArgumentException("No message type is defined in the proto file: " + file);
         }
         return messageTypes;
     }
+
+    private List<ProtoEnumType> extractEnumTypes(String file) {
+        List<ProtoEnumType> enumTypes = Lists.newArrayList();
+        Matcher m = enumType.matcher(file);
+        while (m.find()) {
+
+            String enumTypeName = m.group(1).trim();
+            String enumTypeContent = m.group(2).trim();
+
+            enumTypes.add(ProtoEnumType.newBuilder()
+                    .name(enumTypeName)
+                    .fields(extractEnumFieldTypes(enumTypeContent)).build());
+
+        }
+        if (enumTypes.isEmpty()) {
+            throw new IllegalArgumentException("No enum type is defined in the proto file: " + file);
+        }
+        return enumTypes;
+    }
+
+    private List<ProtoField> extractEnumFieldTypes(String enumTypeContent) {
+        List<ProtoField> fields = Lists.newArrayList();
+        String[] fieldsAsString = enumTypeContent.split(";");
+        for (String field : fieldsAsString) {
+            ProtoField.Builder protoFieldBuilder = ProtoField.newBuilder();
+            field = updateBuilderWithFieldNameAndPosition(protoFieldBuilder, field);
+            fields.add(protoFieldBuilder.build());
+        }
+        return fields;
+    }
+
 
     private List<ProtoField> extractFieldTypes(String messageTypeContent) {
         List<ProtoField> fields = Lists.newArrayList();
@@ -184,32 +222,5 @@ public class ProtoParser {
         protoFieldBuilder.fieldName(strings[0].trim());
         protoFieldBuilder.position(Integer.valueOf(strings[1].trim()));
         return field;
-    }
-
-    public static void main(String[] args) throws IOException {
-        String file = "syntax = \"proto3\";\n" +
-                "\n" +
-                "option java_multiple_files = true;\n" +
-                "option java_package = \"io.grpc.examples.helloworld\";\n" +
-                "option java_outer_classname = \"HelloWorldProto\";\n" +
-                "option objc_class_prefix = \"HLW\";\n" +
-                "\n" +
-                "package helloworld;\n" +
-                "\n" +
-                "message HelloRequest {\n" +
-                "    string name = 1;\n" +
-                "}\n" +
-                "\n" +
-                "message HelloReply {\n" +
-                "    string message = 1;\n" +
-                "}\n" +
-                "\n" +
-                "service Greeter {\n" +
-                "    rpc SayHello (HelloRequest) returns (HelloReply) {}\n" +
-                "}\n";
-
-        ProtoFile protoFile = new ProtoParser().parseString(file);
-
-       System.out.println(protoFile);
     }
 }

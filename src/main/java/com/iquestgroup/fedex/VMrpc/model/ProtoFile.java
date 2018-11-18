@@ -13,4 +13,5 @@ public class ProtoFile {
     private String packageName;
     private List<ProtoService> services = Lists.newArrayList();
     private List<ProtoMessageType> messageTypes = Lists.newArrayList();
+    private List<ProtoEnumType> enumTypes = Lists.newArrayList();
  }

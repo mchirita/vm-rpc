@@ -2,6 +2,7 @@ package com.iquestgroup.fedex.VMrpc.util.converter;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.DescriptorProtos;
+import com.iquestgroup.fedex.VMrpc.model.ProtoEnumType;
 import com.iquestgroup.fedex.VMrpc.model.ProtoField;
 import com.iquestgroup.fedex.VMrpc.model.ProtoFile;
 import com.iquestgroup.fedex.VMrpc.model.ProtoMessageType;
@@ -19,6 +20,7 @@ public class ProtoFileToDescriptorProtoConverter {
                 .newBuilder()
                 .setName(protoFile.getPackageName());
 
+        builder.addAllEnumType(convertFromProtoEnumTypes(protoFile));
         builder.addAllService(convertToProtoServices(protoFile));
         builder.addAllMessageType(convertFromProtoMessageTypes(protoFile.getMessageTypes()));
 
@@ -46,6 +48,32 @@ public class ProtoFileToDescriptorProtoConverter {
         }
         return descriptorProtos;
     }
+
+    private List<DescriptorProtos.EnumDescriptorProto> convertFromProtoEnumTypes(ProtoFile protoFile) {
+        List<DescriptorProtos.EnumDescriptorProto> descriptorProtos = Lists.newArrayList();
+        for (ProtoEnumType enumType : protoFile.getEnumTypes()) {
+            descriptorProtos.add(DescriptorProtos.EnumDescriptorProto.newBuilder()
+                    .setName(enumType.getName())
+                    .addAllValue(convertFromProtoFieldEnum(enumType))
+                    .build());
+        }
+        return descriptorProtos;
+    }
+
+    private List<DescriptorProtos.EnumValueDescriptorProto> convertFromProtoFieldEnum(ProtoEnumType type) {
+        List<DescriptorProtos.EnumValueDescriptorProto> fieldDescriptorProtos = Lists.newArrayList();
+        for (ProtoField field : type.getFields()) {
+            DescriptorProtos.EnumValueDescriptorProto.Builder fieldDescriptorBuilder = DescriptorProtos.EnumValueDescriptorProto
+                    .newBuilder()
+                    .setName(field.getFieldName())
+                    .setNumber(field.getPosition());
+
+            fieldDescriptorProtos.add(fieldDescriptorBuilder.build());
+        }
+        return fieldDescriptorProtos;
+    }
+
+
 
     private List<DescriptorProtos.FieldDescriptorProto> convertFromProtoFields(ProtoMessageType type) {
         List<DescriptorProtos.FieldDescriptorProto> fieldDescriptorProtos = Lists.newArrayList();
