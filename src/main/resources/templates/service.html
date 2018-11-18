@@ -9,18 +9,47 @@
 </head>
 <body>
 	<br></br>
-	<div>Please select a method to run for service</div>
 	<br></br>
 	<form action="#" th:action="@{/selectMethod}"
 		th:object="${selectedMethod}" method="post" class="form-horizontal">
-
-		<select th:field="*{serviceMethod}" th:remove="all-but-first" class="form-control">
-			<option th:each="method : ${grpcServiceMethods}" th:value="${method}"
-				th:text="${method}"></option>
-		</select> 
-		<input type="submit" value="Send" />
+		<table>
+			<tr>
+				<td>
+					<div>Please select the service/method you want to call</div> <select
+					th:field="*{serviceMethod}" th:remove="all-but-first"
+					class="form-control">
+						<option th:each="method : ${grpcServiceMethods}"
+							th:value="${method}" th:text="${method}"></option>
+				</select>
+				</td>
+			</tr>
+			<tr>
+				<td><p>
+						Host: <input type="text" th:field="*{host}" />
+					</p>
+					<p>
+						Port: <input type="text" th:field="*{port}" />
+					</p></td>
+			</tr>
+			<tr>
+				<td>JSON Paylaod:</td>
+			</tr>
+			<tr>
+				<td><textarea name="json_payload" rows="20" cols="120"
+						th:field="*{jsonPayload}" /></td>
+			</tr>
+			<tr>
+				<td><input type="submit" value="Call" /></td>
+			</tr>
+			<tr th:if="${selectedMethod.response != null}">
+				<td>Response:</td>
+			</tr>
+			<tr th:if="${selectedMethod.response != null}">
+				<td><textarea name="response" rows="5" cols="120"
+						th:field="*{response}" /></td>
+			</tr>
+		</table>
 	</form>
 
-	
 </body>
 </html>

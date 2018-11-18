@@ -8,5 +8,13 @@ import lombok.Data;
 public class SelectedMethod implements Serializable {
     
     private String serviceMethod;
+    
+    private String host;
+    
+    private String port;
+    
+    private String jsonPayload;
+    
+    private String response;
 
 }

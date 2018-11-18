@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class ProtoContent {
 
-    private String content;
+    private String content = "";
 }
