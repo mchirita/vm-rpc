@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.test.helloworld";
+option java_outer_classname = "HelloWorldProto";
+option objc_class_prefix = "HLW";
+
+package helloworld;
+
+message HelloRequest {
+    string name = 1;
+    enum TestEnum0 {
+        UNIVERSAL = 0;
+        WEB = 1;
+    }
+}
+
+message HelloReply {
+    enum TestEnum1 {
+        UNIVERSAL = 0;
+        WEB = 1;
+    }
+    string message1 = 1;
+    string message2 = 2;
+}
+
+enum TestEnum2 {
+    UNIVERSAL = 0;
+    WEB = 1;
+}
+
+service Greeter {
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+    rpc SayHola (HelloRequest) returns (HelloReply) { }
+}
